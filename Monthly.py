@@ -5,7 +5,7 @@ def get_maxValue(symbol) :
     url = f'https://www.alphavantage.co/query'
     # マンスリー
     params = {
-        "function": "TIME_SERIES_MONTHLY",
+        "function": "TIME_SERIES_MONTHLY_ADJUSTED",
         "symbol": "",
         "apikey": "demo",
     }
@@ -23,19 +23,29 @@ def get_maxValue(symbol) :
             return"注意: APIの呼び出し制限を超えています。少し時間を空けて再試行してください。"
 
         # 必要なデータを取得
-        time_series = data['Monthly Time Series']
+        time_series = data['Monthly Adjusted Time Series']
         if not time_series:
             return "エラー: データが見つかりません。time_seriesが間違っている可能性があります。"
 
-        max_high = max(float(values["2. high"]) for values in time_series.values())
+        maxValue = 1
+        adjustRate = 1
+        for date, values in reversed(list(time_series.items())):
+            highPrice = float(values["2. high"])
+            closeValue = float(values["4. close"])
+
+            maxValue = max(highPrice / adjustRate, maxValue)
+            # 終値/調整額で分割率の近似値を取得
+            adjustRate = round(closeValue / float(values["5. adjusted close"]))
+
+        return str(maxValue)
+        # max_high = max(float(values["2. high"]) for values in time_series.values())
+        # return max_high
 
         # # データフレームを使用する場合
         # df = pandas.DataFrame.from_dict(time_series, orient='index', dtype=float)
         # print(df)
         #return df["2.higf "]
-        
-        return max_high
-    
+
     except requests.exceptions.RequestException as e:
         # ネットワークエラーなどの例外をキャッチ
         return f"リクエストエラーが発生しました: {e}"
